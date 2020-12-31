@@ -47,6 +47,15 @@ def printWordFreq(user):
 
     return
 
+#
+# Word Frequency String
+#
+def createWordFreqString(user):
+    word_frequency = f'[Word Count for {user.name}]\n'
+    for currentKey in user.sortedKeys:
+        word_frequency += (f"     {currentKey}: {user.wordFreq[currentKey]}\n")
+
+    return word_frequency
 
 ##########
 # Events #
@@ -136,7 +145,10 @@ async def freq(ctx):
     mentioned_user = ctx.message.mentions[0]
 
     if mentioned_user in users:
-        printWordFreq(users[mentioned_user])
+        # printWordFreq(users[mentioned_user])
+        word_frequncy_string = createWordFreqString(users[mentioned_user])
+        await ctx.send(word_frequncy_string)
+        
 
 # Run the Client
 client.run(os.getenv('TOKEN'))
