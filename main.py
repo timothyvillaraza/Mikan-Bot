@@ -41,10 +41,10 @@ def generateWordFrequency(author, userInput):
 # Print Word Frequency
 #
 def printWordFreq(user):
-    print(f'[Word Count for {user.name}]')
+    print(f'     [Word Count for {user.name}]')
     for currentKey in user.sortedKeys:
-        print(f"{currentKey}: {user.wordFreq[currentKey]}")
-    
+        print(f"     {currentKey}: {user.wordFreq[currentKey]}")
+
     return
 
 
@@ -63,10 +63,12 @@ async def on_ready():
 users = dict()
 
 
-# Listen for Messages
+# NOTE: functions decorated with @client.listen recieves 'Message' instances
+# Listen for Messages (Recieves message object)
 # All events will be slow because this function is ran first?
 @client.listen('on_message')
 async def on_message(message):
+    # Prevents bot from responding to itself
     if message.author == client.user:
         return
 
@@ -77,7 +79,7 @@ async def on_message(message):
     else:
         # New User: Add to database
         author_freq_map = FrequencyMap(message.author)
-        users.update({message.author : author_freq_map})
+        users.update({message.author: author_freq_map})
 
     # Create a word frequency map based on the recieved message
     word_frequency = generateWordFrequency(author_freq_map, message.content)
@@ -87,8 +89,9 @@ async def on_message(message):
     author_freq_map.wordFreq = word_frequency[1]
     author_freq_map.sortedKeys = word_frequency[2]
 
-    printWordFreq(author_freq_map)
-    print('\n')
+    # DEBUG: Prints frequency map to CONSOLE
+    # printWordFreq(author_freq_map)
+    # print('\n')
 
     # DEBUG:
     # message.author: MafuMafu Tofu
@@ -97,19 +100,43 @@ async def on_message(message):
     # print(f'  {message.author}: {message.content}')
 
 
-# Test Command
+############
+# Commands #
+############
+
+# NOTE: functions decorated with @client.command recieves 'Context' instances
+
+
+# Test Mention
+@client.command()
+async def mention(ctx):
+    mentioned_user = ctx.message.mentions[0]
+    await ctx.send(f'{mentioned_user}')
+
+
+# Test Mention
 @client.command()
 async def test(ctx):
-    await ctx.send('A command was recieved by the bot')
+    test = ctx.author
+    await ctx.send(f'{test}')
 
-# @client.command()
-# async def freq(ctx):
-#     printWordFreq()
 
 @client.command()
 async def eli(ctx):
     await ctx.send('Eli? She\'s only the cutest girlfriend around!')
 
+
+# TODO: Find out how to recieve an @ command arguments
+@client.command()
+async def freq(ctx):
+    # No mention was included in the mention
+    if len(ctx.message.mentions) < 1:
+        return
+
+    mentioned_user = ctx.message.mentions[0]
+
+    if mentioned_user in users:
+        printWordFreq(users[mentioned_user])
 
 # Run the Client
 client.run(os.getenv('TOKEN'))
