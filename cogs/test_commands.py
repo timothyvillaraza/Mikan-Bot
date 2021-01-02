@@ -37,3 +37,4 @@ class TestCommands(commands.Cog):
     @commands.command()
     async def mention(self, ctx, mentioned_user: discord.Member):
         await ctx.send(f'{mentioned_user}')
+        
