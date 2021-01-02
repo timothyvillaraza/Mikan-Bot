@@ -43,6 +43,7 @@ class WordFrequency(commands.Cog):
 
     def printWordFreq(self, user):
         """
+
         CONSOLE
 
         Prints word frequency for a specific user to the console
@@ -60,7 +61,7 @@ class WordFrequency(commands.Cog):
         Returns a word frequency string. Used for the discord bot reply.
 
         """
-        word_frequency = f'[Word Count for {user.name}]\n'
+        word_frequency = ''
         for currentKey in user.sortedKeys:
             word_frequency += (
                 f"     {currentKey}: {user.wordFreq[currentKey]}\n")
@@ -105,16 +106,35 @@ class WordFrequency(commands.Cog):
         # if len(ctx.message.mentions) < 1:
         #     return
 
+       
+
         if mentioned_user in self.users:
             # printWordFreq(users[mentioned_user])
-            word_frequncy_string = self.createWordFreqString(
-                self.users[mentioned_user])
-            await ctx.send(word_frequncy_string)
+            word_frequncy_string = self.createWordFreqString(self.users[mentioned_user])
+            
+            embed_message = discord.Embed(
+                title=f'Word Count',
+                color=discord.Color.blue(),
+                description=word_frequncy_string
+            )
+
+            embed_message.set_author(
+                name=mentioned_user.display_name,
+                icon_url=mentioned_user.avatar_url
+            )
+            
+            await ctx.send(embed=embed_message)
 
     # TODO: Look up type() vs isinstance()
     # Error handiling specific to freq() command
     @freq.error
     async def freq_error(self, ctx, error):
+        """
+
+        Error Handiling for .freq
+
+        """
+
         # isinstance(incoming_instance, is_instance_this_type)
         if isinstance(error, commands.MissingRequiredArgument):
             print(

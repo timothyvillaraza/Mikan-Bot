@@ -15,12 +15,19 @@ async def on_ready():
 
 # Load All Cogs
 for filename in os.listdir('./cogs'):
+    # If the current file ends in .py
     if filename.endswith('.py'):
+        # Load the file by name (without .py)
         client.load_extension(f'cogs.{filename[:-3]}')
 
 
 @client.command()
 async def clear_db(ctx):
+    """
+    
+    Clears all keys in the repl.it database
+
+    """
     await ctx.send('Clearing all database keys.')
 
     for key in db:
