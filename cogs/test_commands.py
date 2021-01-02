@@ -8,12 +8,12 @@ def setup(client):
 
 
 # All 'Context' instances have a 'Message' instance
-# 'Message' instances
-# message.content: The sent message
-# message.author: MafuMafu Tofu#3910
-# message.author.name: MafuMafu Tofu
-# message.author.display_name/.nick = Tim
-# print(f'  {message.author}: {message.content}')
+    # 'Message' instances
+    # message.content: The sent message
+    # message.author: MafuMafu Tofu#3910
+    # message.author.name: MafuMafu Tofu
+    # message.author.display_name/.nick = Tim
+    # print(f'  {message.author}: {message.content}')
 
 
 # Cog Class

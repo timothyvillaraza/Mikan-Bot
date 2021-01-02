@@ -1,4 +1,5 @@
 import os
+from replit import db
 import discord
 from discord.ext import commands
 
@@ -17,6 +18,17 @@ async def on_ready():
 for filename in os.listdir('./cogs'):
     if filename.endswith('.py'):
         client.load_extension(f'cogs.{filename[:-3]}')
+
+@client.command()
+async def clear_db(ctx):
+    await ctx.send('Clearing all database keys.')
+
+    for key in db:
+        print(f'{key} deleted')
+        del db[key]
+    
+    await ctx.send('All keys in the database deleted.')
+
 
 
 # Run the Client
