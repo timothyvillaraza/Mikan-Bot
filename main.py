@@ -47,6 +47,7 @@ def printWordFreq(user):
 
     return
 
+
 #
 # Word Frequency String
 #
@@ -56,6 +57,7 @@ def createWordFreqString(user):
         word_frequency += (f"     {currentKey}: {user.wordFreq[currentKey]}\n")
 
     return word_frequency
+
 
 ##########
 # Events #
@@ -118,8 +120,7 @@ async def on_message(message):
 
 # Test Mention
 @client.command()
-async def mention(ctx):
-    mentioned_user = ctx.message.mentions[0]
+async def mention(ctx, mentioned_user : discord.Member):
     await ctx.send(f'{mentioned_user}')
 
 
@@ -135,20 +136,26 @@ async def eli(ctx):
     await ctx.send('Eli? She\'s only the cutest girlfriend around!')
 
 
-# TODO: Find out how to recieve an @ command arguments
+# NOTE: name_of_variable : type_of_instance is discord.py conversion
 @client.command()
-async def freq(ctx):
-    # No mention was included in the mention
-    if len(ctx.message.mentions) < 1:
-        return
-
-    mentioned_user = ctx.message.mentions[0]
+async def freq(ctx, mentioned_user : discord.Member):
+    # If no mention was included in the mention, return.
+    # if len(ctx.message.mentions) < 1:
+    #     return
 
     if mentioned_user in users:
         # printWordFreq(users[mentioned_user])
         word_frequncy_string = createWordFreqString(users[mentioned_user])
         await ctx.send(word_frequncy_string)
-        
+
+# TODO: Look up type() vs isinstance()
+# Error handiling specific to freq() command
+@freq.error
+async def freq_error(ctx, error):
+    # isinstance(incoming_instance, is_instance_this_type)
+    if isinstance(error, commands.MissingRequiredArgument):
+        print(f'ERROR: {ctx.author} did not specify which member to look up.')
+
 
 # Run the Client
 client.run(os.getenv('TOKEN'))
