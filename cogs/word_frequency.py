@@ -13,12 +13,12 @@ class WordFrequency(commands.Cog):
     # Initalizer
     def __init__(self, client):
         self.client = client
-        self.users = dict()  # Use database eventually
+        self.frequencyMaps = dict()  # Use database eventually, username -> FrequencyMap
 
     # Class Definitions
     class FrequencyMap:
-        def __init__(self, name):
-            self.name = name
+        def __init__(self, username):
+            self.username = username
             self.wordFreq = defaultdict(int)
             self.sortedKeys = None
 
@@ -77,23 +77,22 @@ class WordFrequency(commands.Cog):
         if message.author == self.client.user:
             return
 
-        # Look up author_freq_map of message
-        if message.author in self.users:
+        # Look up mentioned user's word frequency
+        if message.author in self.frequencyMaps:
             # Existing User: Pull up from database
-            author_freq_map = self.users[message.author]
+            mentioned_word_freq = self.frequencyMaps[message.author]
         else:
             # New User: Add to database
-            author_freq_map = self.FrequencyMap(message.author)
-            self.users.update({message.author: author_freq_map})
+            mentioned_word_freq = self.FrequencyMap(message.author)
+            self.frequencyMaps.update({message.author: mentioned_word_freq})
 
         # Create a word frequency map based on the recieved message
-        word_frequency = self.generateWordFrequency(author_freq_map,
-                                                    message.content)
+        word_frequency = self.generateWordFrequency(mentioned_word_freq, message.content)
 
-        # Update the author_freq_map's word frequency table
-        author_freq_map = word_frequency[0]
-        author_freq_map.wordFreq = word_frequency[1]
-        author_freq_map.sortedKeys = word_frequency[2]
+        # Update the mentioned_word_freq's word frequency table
+        mentioned_word_freq = word_frequency[0]
+        mentioned_word_freq.wordFreq = word_frequency[1]
+        mentioned_word_freq.sortedKeys = word_frequency[2]
 
         # DEBUG: Prints frequency map to CONSOLE
         # printWordFreq(author_freq_map)
@@ -106,27 +105,25 @@ class WordFrequency(commands.Cog):
         # if len(ctx.message.mentions) < 1:
         #     return
 
-       
-
-        if mentioned_user in self.users:
+        if mentioned_user in self.frequencyMaps:
             # printWordFreq(users[mentioned_user])
-            word_frequncy_string = self.createWordFreqString(self.users[mentioned_user])
-            
-            embed_message = discord.Embed(
-                title=f'Word Count',
-                color=discord.Color.blue(),
-                description=word_frequncy_string
-            )
+            word_frequncy_string = self.createWordFreqString(
+                self.frequencyMaps[mentioned_user])
 
+            # Body of Message
+            embed_message = discord.Embed(
+                title='Word Count',
+                color=discord.Color.blue(),
+                description=word_frequncy_string)
+
+            # Appears at the top of the message
             embed_message.set_author(
                 name=mentioned_user.display_name,
-                icon_url=mentioned_user.avatar_url
-            )
-            
+                icon_url=mentioned_user.avatar_url)
+
             await ctx.send(embed=embed_message)
 
     # TODO: Look up type() vs isinstance()
-    # Error handiling specific to freq() command
     @freq.error
     async def freq_error(self, ctx, error):
         """
@@ -138,5 +135,5 @@ class WordFrequency(commands.Cog):
         # isinstance(incoming_instance, is_instance_this_type)
         if isinstance(error, commands.MissingRequiredArgument):
             print(
-                f'ERROR: {ctx.author} did not specify which member to look up.'
+                f'freq ERROR: {ctx.author} did not specify which member to look up.'
             )
