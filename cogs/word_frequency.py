@@ -2,17 +2,18 @@ import discord
 from discord.ext import commands
 from collections import defaultdict
 
+
 # Setup Function
 def setup(client):
     client.add_cog(WordFrequency(client))
+
 
 # Cog Class
 class WordFrequency(commands.Cog):
     # Initalizer
     def __init__(self, client):
         self.client = client
-        self.users = dict() # Use database eventually
-
+        self.users = dict()  # Use database eventually
 
     # Class Definitions
     class FrequencyMap:
@@ -20,7 +21,6 @@ class WordFrequency(commands.Cog):
             self.name = name
             self.wordFreq = defaultdict(int)
             self.sortedKeys = None
-
 
     # Helper Functions
     def generateWordFrequency(self, author, userInput):
@@ -41,7 +41,6 @@ class WordFrequency(commands.Cog):
 
         return author, wordFreq, sorted_wordFreqKeys
 
-
     def printWordFreq(self, user):
         """
         CONSOLE
@@ -55,7 +54,6 @@ class WordFrequency(commands.Cog):
 
         return
 
-    
     def createWordFreqString(self, user):
         """
 
@@ -64,10 +62,10 @@ class WordFrequency(commands.Cog):
         """
         word_frequency = f'[Word Count for {user.name}]\n'
         for currentKey in user.sortedKeys:
-            word_frequency += (f"     {currentKey}: {user.wordFreq[currentKey]}\n")
+            word_frequency += (
+                f"     {currentKey}: {user.wordFreq[currentKey]}\n")
 
         return word_frequency
-
 
     # NOTE: functions decorated with @client.listen recieves 'Message' instances
     # Listen for Messages (Recieves message object)
@@ -88,7 +86,8 @@ class WordFrequency(commands.Cog):
             self.users.update({message.author: author_freq_map})
 
         # Create a word frequency map based on the recieved message
-        word_frequency = self.generateWordFrequency(author_freq_map, message.content)
+        word_frequency = self.generateWordFrequency(author_freq_map,
+                                                    message.content)
 
         # Update the author_freq_map's word frequency table
         author_freq_map = word_frequency[0]
@@ -99,21 +98,18 @@ class WordFrequency(commands.Cog):
         # printWordFreq(author_freq_map)
         # print('\n')
 
-
-
     # NOTE: name_of_variable : type_of_instance is a discord.py conversion feature
     @commands.command()
-    async def freq(self, ctx, mentioned_user : discord.Member):
+    async def freq(self, ctx, mentioned_user: discord.Member):
         # If no mention was included in the mention, return.
         # if len(ctx.message.mentions) < 1:
         #     return
 
         if mentioned_user in self.users:
             # printWordFreq(users[mentioned_user])
-            word_frequncy_string = self.createWordFreqString(self.users[mentioned_user])
+            word_frequncy_string = self.createWordFreqString(
+                self.users[mentioned_user])
             await ctx.send(word_frequncy_string)
-
-
 
     # TODO: Look up type() vs isinstance()
     # Error handiling specific to freq() command
@@ -121,4 +117,6 @@ class WordFrequency(commands.Cog):
     async def freq_error(self, ctx, error):
         # isinstance(incoming_instance, is_instance_this_type)
         if isinstance(error, commands.MissingRequiredArgument):
-            print(f'ERROR: {ctx.author} did not specify which member to look up.')
+            print(
+                f'ERROR: {ctx.author} did not specify which member to look up.'
+            )
