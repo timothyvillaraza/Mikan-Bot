@@ -1,6 +1,6 @@
 import os
-from replit import db
 import discord
+from replit import db
 from discord.ext import commands
 
 # Client Instance: All commands will start with '.'
