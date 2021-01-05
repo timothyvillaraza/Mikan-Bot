@@ -2,7 +2,7 @@ import discord
 import requests
 from discord.ext import commands
 from collections import defaultdict
-
+from math import ceil
 
 # Setup Function
 def setup(bot):
@@ -16,14 +16,13 @@ class WordFrequency(commands.Cog):
         self.bot = bot
         self.frequencyMaps = {}  # Use database eventually, username -> FrequencyMap
 
-    # Class Definitions
-    class FrequencyMap:
-        def __init__(self, username):
-            self.username = username
-            self.wordFreq = defaultdict(int) # defaultdict(int): Nonexistant keys assigned 0
-            self.sortedKeys = None
 
-    # Helper Functions
+    """
+    
+    Helper Functions
+    
+    """
+
     def filterMessage(self, message):
         """
         TODO: Handle Request Errors
@@ -34,12 +33,14 @@ class WordFrequency(commands.Cog):
         are replaced with '*' equal to the length of the word
 
         """
+
         URL = f'https://www.purgomalum.com/service/json'
         PARAMS = {'text': message}
         responce = requests.get(url=URL, params=PARAMS)
-        post_data = responce.json()
+        data = responce.json()
 
-        return post_data['result']
+        return data['result']
+
 
     def generateWordFrequency(self, author, userInput):
         """
@@ -64,19 +65,22 @@ class WordFrequency(commands.Cog):
 
         return author, author_wordFreq, sorted_wordFreqKeys
 
+
     def printWordFreq(self, user):
         """
 
-        CONSOLE
+        CONSOLE ONLY
 
         Prints word frequency for a specific user to the console
 
         """
+
         print(f'     [Word Count for {user.name}]')
         for currentKey in user.sortedKeys:
             print(f"     {currentKey}: {user.wordFreq[currentKey]}")
 
         return
+
 
     def createWordFreqString(self, user):
         """
@@ -84,11 +88,52 @@ class WordFrequency(commands.Cog):
         Returns a word frequency string. Used for the discord bot reply.
 
         """
+
         word_frequency = ''
         for key in user.sortedKeys:
             word_frequency += (f"     {key}: {user.wordFreq[key]}\n")
 
         return word_frequency
+    
+    def createPages(self, message, nPages=10):
+        '''
+
+        Recives a word frequency string in list form and
+        returns them divides into pages by 'nPages' words.
+
+        '''
+        page = ''
+        pages = []
+
+        # Push every 'nPages' words into the 'pages' list
+        for i, word in enumerate(message.split('\n')):
+            if i % nPages == 0 and i != 0:
+                pages.append(page)
+                page = ''
+
+            page += word + '\n'
+
+        # Push the remainder of words into the last page
+        if page != '':
+            pages.append(page)
+
+        return pages, ceil(i / nPages)
+
+
+
+    # Class Definitions
+    class FrequencyMap:
+        def __init__(self, username):
+            self.username = username
+            self.wordFreq = defaultdict(int) # defaultdict(int): Nonexistant keys assigned 0
+            self.sortedKeys = None
+
+
+    """
+
+    Discord Events
+
+    """
 
     # NOTE: functions decorated with @bot.listen recieves 'Message' instances
     # Listen for Messages (Recieves message object)
@@ -118,9 +163,11 @@ class WordFrequency(commands.Cog):
 
         # DEBUG: Prints frequency map to CONSOLE
         # printWordFreq(author_freq_map)
-        # print('\n')
+        # print()
 
+    
     # NOTE: name_of_variable : type_of_instance is a discord.py conversion feature
+    # TODO: Add ability to look up nth most used word
     @commands.command()
     async def freq(self, ctx, mentioned_user: discord.Member):
         # If no mention was included in the mention, return.
@@ -132,19 +179,30 @@ class WordFrequency(commands.Cog):
             word_frequncy_string = self.createWordFreqString(
                 self.frequencyMaps[mentioned_user])
 
-            # Body of Message
-            embed_message = discord.Embed(
-                title='Word Count',
-                color=discord.Color.blue(),
-                description=word_frequncy_string
-            )
+            # Create Message Pages
+            pages = self.createPages(word_frequncy_string)
 
-            # Appears at the top of the message
-            embed_message.set_author(
-                name=mentioned_user.display_name,
-                icon_url=mentioned_user.avatar_url)
+            for nPage, page in enumerate(pages[0]):
+                print(page)
 
-            await ctx.send(embed=embed_message)
+                # Body of Message
+                embed_message = discord.Embed(
+                    title='Word Count',
+                    color=discord.Color.blue(),
+                    description=page
+                )
+
+                # Appears at the top of the message
+                embed_message.set_author(
+                    name=mentioned_user.display_name,
+                    icon_url=mentioned_user.avatar_url
+                )
+
+                embed_message.set_footer(
+                    text=f"page {nPage + 1}/{pages[1]}"
+                )
+
+                await ctx.send(embed=embed_message)
 
     # TODO: Look up type() vs isinstance()
     @freq.error
