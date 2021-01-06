@@ -14,6 +14,22 @@ class WordFrequency(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.frequencyMaps = {}  # Use database eventually, username -> FrequencyMap
+    
+
+    """
+
+    Nested Class Definitions
+    
+    """
+
+    # TO DO: Find out if initalizing list and overwriting instead of appending
+    #        is bad practice. Alternative: self.pages = none or appending self.pages
+    class FrequencyMap:
+        def __init__(self, username):
+            self.username = username
+            self.wordFreq = defaultdict(int) # defaultdict(int): Nonexistant keys assigned 0
+            self.sortedKeys = None
+            self.pages = []
 
 
     """
@@ -21,6 +37,7 @@ class WordFrequency(commands.Cog):
     Helper Functions
     
     """
+
 
     def filterMessage(self, message):
         """
@@ -121,19 +138,12 @@ class WordFrequency(commands.Cog):
         return pages
 
 
-    # Class Definitions
-    class FrequencyMap:
-        def __init__(self, username):
-            self.username = username
-            self.wordFreq = defaultdict(int) # defaultdict(int): Nonexistant keys assigned 0
-            self.sortedKeys = None
-
-
     """
 
     Discord Events
 
     """
+
 
     # NOTE: functions decorated with @bot.listen recieves 'Message' instances
     # Listen for Messages (Recieves message object)
@@ -153,7 +163,7 @@ class WordFrequency(commands.Cog):
             mentioned_word_freq = self.FrequencyMap(message.author)
             self.frequencyMaps.update({message.author: mentioned_word_freq})
 
-        # Create a word frequency map based on the recieved message
+        # Create a (filtered) word frequency map based on the recieved message
         word_frequency = self.generateWordFrequency(mentioned_word_freq, message.content)
 
         # Update the mentioned_word_freq's word frequency table
@@ -170,6 +180,12 @@ class WordFrequency(commands.Cog):
     # TODO: Add ability to look up nth most used word
     @commands.command()
     async def freq(self, ctx, mentioned_user: discord.Member):
+        """
+
+        Sends the frequency table of the mentioned user.
+
+        """
+
         # If no mention was included in the mention, return.
         # if len(ctx.message.mentions) < 1:
         #     return
@@ -181,7 +197,7 @@ class WordFrequency(commands.Cog):
                 self.frequencyMaps[mentioned_user])
 
             # Paginate string
-            pages = self.createPages(word_frequncy_string)
+            mentioned_user.pages = self.createPages(word_frequncy_string, 10)
 
             # Convert pages from string format into embed
             for page_number, page in enumerate(pages):
@@ -224,3 +240,14 @@ class WordFrequency(commands.Cog):
             print(
                 f'freq ERROR: {ctx.author} did not specify which member to look up.'
             )
+
+    @commands.command()
+    async def changePage(self, ctx):
+        """
+
+        https://stackoverflow.com/questions/61787520/i-want-to-make-a-multi-page-help-command-using-discord-py
+
+        """
+        # reaction, user = await self.bot.wait_for()
+
+
