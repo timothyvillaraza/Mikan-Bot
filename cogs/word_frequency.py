@@ -176,7 +176,7 @@ class WordFrequency(commands.Cog):
 
         # Look up mentioned user in database
         if mentioned_user in self.frequencyMaps:
-            # printWordFreq(users[mentioned_user])
+            # Convert their word frequency table a string
             word_frequncy_string = self.createWordFreqString(
                 self.frequencyMaps[mentioned_user])
 
@@ -202,7 +202,12 @@ class WordFrequency(commands.Cog):
                     text=f'page {page_number + 1}/{len(pages)}'
                 )
 
-                await ctx.send(embed=embed_message)
+                # Send and store sent message as a 'message' instance
+                bot_message = await ctx.send(embed=embed_message)
+
+                # Add reactions to the send message
+                await bot_message.add_reaction('⬅️')
+                await bot_message.add_reaction('➡️')
 
 
     # TODO: Look up type() vs isinstance()
