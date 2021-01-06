@@ -2,7 +2,6 @@ import discord
 import requests
 from discord.ext import commands
 from collections import defaultdict
-from math import ceil
 
 # Setup Function
 def setup(bot):
@@ -90,18 +89,20 @@ class WordFrequency(commands.Cog):
         """
 
         word_frequency = ''
-        for key in user.sortedKeys:
-            word_frequency += (f"     {key}: {user.wordFreq[key]}\n")
+        for rank, key in enumerate(user.sortedKeys):
+            word_frequency += (f"     #{rank + 1} - {key}: {user.wordFreq[key]}\n")
 
         return word_frequency
-    
+
+
     def createPages(self, message, nPages=10):
-        '''
+        """
 
         Recives a word frequency string in list form and
         returns them divides into pages by 'nPages' words.
 
-        '''
+        """
+
         page = ''
         pages = []
 
@@ -117,8 +118,7 @@ class WordFrequency(commands.Cog):
         if page != '':
             pages.append(page)
 
-        return pages, ceil(i / nPages)
-
+        return pages
 
 
     # Class Definitions
@@ -165,7 +165,7 @@ class WordFrequency(commands.Cog):
         # printWordFreq(author_freq_map)
         # print()
 
-    
+
     # NOTE: name_of_variable : type_of_instance is a discord.py conversion feature
     # TODO: Add ability to look up nth most used word
     @commands.command()
@@ -174,17 +174,17 @@ class WordFrequency(commands.Cog):
         # if len(ctx.message.mentions) < 1:
         #     return
 
+        # Look up mentioned user in database
         if mentioned_user in self.frequencyMaps:
             # printWordFreq(users[mentioned_user])
             word_frequncy_string = self.createWordFreqString(
                 self.frequencyMaps[mentioned_user])
 
-            # Create Message Pages
+            # Paginate string
             pages = self.createPages(word_frequncy_string)
 
-            for nPage, page in enumerate(pages[0]):
-                print(page)
-
+            # Convert pages from string format into embed
+            for page_number, page in enumerate(pages):
                 # Body of Message
                 embed_message = discord.Embed(
                     title='Word Count',
@@ -199,10 +199,11 @@ class WordFrequency(commands.Cog):
                 )
 
                 embed_message.set_footer(
-                    text=f"page {nPage + 1}/{pages[1]}"
+                    text=f'page {page_number + 1}/{len(pages)}'
                 )
 
                 await ctx.send(embed=embed_message)
+
 
     # TODO: Look up type() vs isinstance()
     @freq.error
