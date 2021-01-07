@@ -23,13 +23,18 @@ class WordFrequency(commands.Cog):
     """
 
     # TO DO: Find out if initalizing list and overwriting instead of appending
-    #        is bad practice. Alternative: self.pages = none or appending self.pages
+    # is bad practice. Alternative: self.pages = none or appending self.pages
     class FrequencyMap:
         def __init__(self, username):
             self.username = username
+
+            # Individual word frequency
             self.wordFreq = defaultdict(int) # defaultdict(int): Nonexistant keys assigned 0
             self.sortedKeys = None
+            
+            # Sent to Discord chat 
             self.pages = []
+            self.total_pages = 0
 
 
     """
@@ -52,9 +57,14 @@ class WordFrequency(commands.Cog):
 
         URL = f'https://www.purgomalum.com/service/json'
         PARAMS = {'text': message}
-        responce = requests.get(url=URL, params=PARAMS)
-        data = responce.json()
 
+        responce = requests.get(url=URL, params=PARAMS)
+
+        if ~responce.ok():
+            raise Exception('There was an error')
+
+        print(responce)
+        data = responce.json()
         return data['result']
 
 
@@ -64,9 +74,12 @@ class WordFrequency(commands.Cog):
         Take each word in the input and count up it's occurances.
         Returns the author, word frequency dictionary, and descending order keys for the word frequency.
 
+        Returns a list containing the author, word frequency dict, and a sorted list of keys for the word freq.
+
         """
 
         author_wordFreq = author.wordFreq
+
         filtered_message = self.filterMessage(userInput.casefold())
 
         # If a key doesn't exist, add it with a default value of 0
@@ -88,6 +101,8 @@ class WordFrequency(commands.Cog):
         CONSOLE ONLY
 
         Prints word frequency for a specific user to the console
+
+        No return value.
 
         """
 
@@ -117,6 +132,8 @@ class WordFrequency(commands.Cog):
 
         Recives a word frequency string in list form and
         returns them divides into pages by 'nPages' words.
+
+        Returns a list
 
         """
 
@@ -163,13 +180,18 @@ class WordFrequency(commands.Cog):
             mentioned_word_freq = self.FrequencyMap(message.author)
             self.frequencyMaps.update({message.author: mentioned_word_freq})
 
-        # Create a (filtered) word frequency map based on the recieved message
-        word_frequency = self.generateWordFrequency(mentioned_word_freq, message.content)
+        
+        try:
+            # Create a (filtered) word frequency map based on the recieved message
+            word_frequency = self.generateWordFrequency(mentioned_word_freq, message.content)
 
-        # Update the mentioned_word_freq's word frequency table
-        mentioned_word_freq = word_frequency[0]
-        mentioned_word_freq.wordFreq = word_frequency[1]
-        mentioned_word_freq.sortedKeys = word_frequency[2]
+            # Update the mentioned_word_freq's word frequency table
+            mentioned_word_freq = word_frequency[0]
+            mentioned_word_freq.wordFreq = word_frequency[1]
+            mentioned_word_freq.sortedKeys = word_frequency[2]
+        except:
+            print('Error')
+
 
         # DEBUG: Prints frequency map to CONSOLE
         # printWordFreq(author_freq_map)
@@ -186,6 +208,7 @@ class WordFrequency(commands.Cog):
 
         """
 
+
         # If no mention was included in the mention, return.
         # if len(ctx.message.mentions) < 1:
         #     return
@@ -198,9 +221,10 @@ class WordFrequency(commands.Cog):
 
             # Paginate string
             mentioned_user.pages = self.createPages(word_frequncy_string, 10)
+            mentioned_user.total_pages = len(mentioned_user.pages)
 
             # Convert pages from string format into embed
-            for page_number, page in enumerate(pages):
+            for page_number, page in enumerate(mentioned_user.pages):
                 # Body of Message
                 embed_message = discord.Embed(
                     title='Word Count',
@@ -215,7 +239,7 @@ class WordFrequency(commands.Cog):
                 )
 
                 embed_message.set_footer(
-                    text=f'page {page_number + 1}/{len(pages)}'
+                    text=f'page {page_number + 1}/{len(mentioned_user.pages)}'
                 )
 
                 # Send and store sent message as a 'message' instance
@@ -224,6 +248,32 @@ class WordFrequency(commands.Cog):
                 # Add reactions to the send message
                 await bot_message.add_reaction('⬅️')
                 await bot_message.add_reaction('➡️')
+
+            
+            # current_page = 1
+            
+            # # Function used in ___
+            # def check(reaction, user):
+            #     # Maybe first condition not needed?
+            #     return user != self.bot.user and reaction in ['⬅️', '➡️']
+
+            # # Get the reaction and user from context
+            # while True:
+            #     try:
+            #         # Throws Timeout Error after no reactions in 60 seconds
+            #         reaction, user = await self.bot.wait_for('reaction_add', timeout=10, check=check)
+
+            #         if reaction == '⬅️':
+            #             current_page = (current_page - 1) % user.total_pages
+            #             print('Left React')
+                        
+            #         elif reaction == '➡️':
+            #             current_page = (current_page - 1) % user.total_pages
+            #             print('Right React')
+
+            #     except self.asyncio.TimeoutError:
+            #         print('Time out')
+            #         break
 
 
     # TODO: Look up type() vs isinstance()
@@ -240,14 +290,3 @@ class WordFrequency(commands.Cog):
             print(
                 f'freq ERROR: {ctx.author} did not specify which member to look up.'
             )
-
-    @commands.command()
-    async def changePage(self, ctx):
-        """
-
-        https://stackoverflow.com/questions/61787520/i-want-to-make-a-multi-page-help-command-using-discord-py
-
-        """
-        # reaction, user = await self.bot.wait_for()
-
-
