@@ -14,6 +14,15 @@ class WordFrequency(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.frequencyMaps = {}  # Use database eventually, username -> FrequencyMap
+    
+    # Class Definitions
+    class FrequencyMap:
+        def __init__(self, username):
+            self.username = username
+            self.sfw = True
+            self.wordFreq = defaultdict(int) # defaultdict(int): Nonexistant keys assigned 0
+            self.sortedKeys = None
+            self.pages = []
 
 
     """
@@ -50,10 +59,14 @@ class WordFrequency(commands.Cog):
         """
 
         author_wordFreq = author.wordFreq
-        filtered_message = self.filterMessage(userInput.casefold())
+        
+        if author.sfw:
+            message = self.filterMessage(userInput.casefold())
+        else:
+            message = userInput.casefold()
 
         # If a key doesn't exist, add it with a default value of 0
-        for word in filtered_message.split():
+        for word in message.split():
             # If the current word was not censored (not all '*')
             if word != len(word) * '*':
                 author_wordFreq[word] += 1
@@ -95,20 +108,20 @@ class WordFrequency(commands.Cog):
         return word_frequency
 
 
-    def createPages(self, message, nPages=10):
+    def createPages(self, message, nWords=10):
         """
 
         Recives a word frequency string in list form and
-        returns them divides into pages by 'nPages' words.
+        returns them divides into pages by 'nWords' words.
 
         """
 
         page = ''
         pages = []
 
-        # Push every 'nPages' words into the 'pages' list
+        # Push every 'nWords' words into the 'pages' list
         for i, word in enumerate(message.split('\n')):
-            if i % nPages == 0 and i != 0:
+            if i % nWords == 0 and page != '':
                 pages.append(page)
                 page = ''
 
@@ -119,14 +132,6 @@ class WordFrequency(commands.Cog):
             pages.append(page)
 
         return pages
-
-
-    # Class Definitions
-    class FrequencyMap:
-        def __init__(self, username):
-            self.username = username
-            self.wordFreq = defaultdict(int) # defaultdict(int): Nonexistant keys assigned 0
-            self.sortedKeys = None
 
 
     """
@@ -176,15 +181,18 @@ class WordFrequency(commands.Cog):
 
         # Look up mentioned user in database
         if mentioned_user in self.frequencyMaps:
+            # Word frequency of mentioned user
+            mentioned_freq = self.frequencyMaps[mentioned_user]
+
             # Convert their word frequency table a string
             word_frequncy_string = self.createWordFreqString(
                 self.frequencyMaps[mentioned_user])
 
-            # Paginate string
-            pages = self.createPages(word_frequncy_string)
+            # Paginate string and save to instance
+            mentioned_freq.pages = self.createPages(word_frequncy_string)
 
             # Convert pages from string format into embed
-            for page_number, page in enumerate(pages):
+            for page_number, page in enumerate(mentioned_freq.pages):
                 # Body of Message
                 embed_message = discord.Embed(
                     title='Word Count',
@@ -199,7 +207,7 @@ class WordFrequency(commands.Cog):
                 )
 
                 embed_message.set_footer(
-                    text=f'page {page_number + 1}/{len(pages)}'
+                    text=f'page {page_number + 1}/{len(mentioned_freq.pages)}'
                 )
 
                 # Send and store sent message as a 'message' instance
