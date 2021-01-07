@@ -1,4 +1,5 @@
 import discord
+import asyncio # USED TO CATCH TIMEOUT ERRROR RAISED BY discord.Client.wait_for()
 import requests
 from discord.ext import commands
 from collections import defaultdict
@@ -192,30 +193,55 @@ class WordFrequency(commands.Cog):
             mentioned_freq.pages = self.createPages(word_frequncy_string)
 
             # Convert pages from string format into embed
-            for page_number, page in enumerate(mentioned_freq.pages):
-                # Body of Message
-                embed_message = discord.Embed(
-                    title='Word Count',
-                    color=discord.Color.blue(),
-                    description=page
-                )
+            page = mentioned_freq.pages[0]
+            
+            # Body of Message
+            embed_message = discord.Embed(
+                title='Word Count',
+                color=discord.Color.blue(),
+                description=page
+            )
 
-                # Appears at the top of the message
-                embed_message.set_author(
-                    name=mentioned_user.display_name,
-                    icon_url=mentioned_user.avatar_url
-                )
+            # Appears at the top of the message
+            embed_message.set_author(
+                name=mentioned_user.display_name,
+                icon_url=mentioned_user.avatar_url
+            )
 
-                embed_message.set_footer(
-                    text=f'page {page_number + 1}/{len(mentioned_freq.pages)}'
-                )
+            # Appears at the bottom of the message
+            embed_message.set_footer(
+                text=f'page 1/{len(mentioned_freq.pages)}'
+            )
 
-                # Send and store sent message as a 'message' instance
-                bot_message = await ctx.send(embed=embed_message)
+            # Send and store sent message as a 'message' instance
+            bot_message = await ctx.send(embed=embed_message)
 
-                # Add reactions to the send message
-                await bot_message.add_reaction('⬅️')
-                await bot_message.add_reaction('➡️')
+            # Add reactions to the send message
+            await bot_message.add_reaction('⬅️')
+            await bot_message.add_reaction('➡️')
+            
+            def check(reaction, user):
+                firstCondition = user != self.bot.user
+                secondCondition = str(reaction.emoji) in ['⬅️', '➡️']
+                result = firstCondition and secondCondition
+
+                print(f'{firstCondition} and {secondCondition}: {result}')
+                return result
+            
+            while True:
+                try:
+                    reaction, user = await self.bot.wait_for("reaction_add", timeout=60, check=check)
+
+                    if str(reaction.emoji):
+                        print('Right')
+
+                    elif str(reaction.emoji):
+                        print('Left')
+
+                except asyncio.TimeoutError:
+                    print('Done')
+                    break
+                    # ending the loop if user doesn't react after x seconds
 
 
     # TODO: Look up type() vs isinstance()
@@ -231,4 +257,4 @@ class WordFrequency(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             print(
                 f'freq ERROR: {ctx.author} did not specify which member to look up.'
-            )
+                )
