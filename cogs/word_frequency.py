@@ -20,7 +20,7 @@ class WordFrequency(commands.Cog):
     class FrequencyMap:
         def __init__(self, username):
             self.username = username
-            self.sfw = True
+            self.sfw = False # Default: True
             self.wordFreq = defaultdict(int) # defaultdict(int): Nonexistant keys assigned 0
             self.sortedKeys = None
             self.pages = []
@@ -133,6 +133,22 @@ class WordFrequency(commands.Cog):
             pages.append(page)
 
         return pages
+    
+    def createEmbedMessage(self, user, userFreq, message):
+        # Body of Message
+        embed_message = discord.Embed(
+            title='Word Count',
+            color=discord.Color.blue(),
+            description=message
+        )
+
+        # Appears at the top of the message
+        embed_message.set_author(
+            name=user.display_name,
+            icon_url=user.avatar_url
+        )
+
+        return embed_message
 
 
     """
@@ -194,19 +210,8 @@ class WordFrequency(commands.Cog):
 
             # Convert pages from string format into embed
             page = mentioned_freq.pages[0]
-            
-            # Body of Message
-            embed_message = discord.Embed(
-                title='Word Count',
-                color=discord.Color.blue(),
-                description=page
-            )
 
-            # Appears at the top of the message
-            embed_message.set_author(
-                name=mentioned_user.display_name,
-                icon_url=mentioned_user.avatar_url
-            )
+            embed_message = self.createEmbedMessage(mentioned_user, mentioned_freq, page)
 
             # Appears at the bottom of the message
             embed_message.set_footer(
@@ -216,30 +221,42 @@ class WordFrequency(commands.Cog):
             # Send and store sent message as a 'message' instance
             bot_message = await ctx.send(embed=embed_message)
 
-            # Add reactions to the send message
-            await bot_message.add_reaction('⬅️')
-            await bot_message.add_reaction('➡️')
-            
-            def check(reaction, user):
-                firstCondition = user != self.bot.user
-                secondCondition = str(reaction.emoji) in ['⬅️', '➡️']
-                result = firstCondition and secondCondition
+            # Set emoji's for arrows
+            arrow_left = '⬅️'
+            arrow_right = '➡️'
 
-                print(f'{firstCondition} and {secondCondition}: {result}')
-                return result
-            
+            # Add reactions to the send message
+            await bot_message.add_reaction(arrow_left)
+            await bot_message.add_reaction(arrow_right)
+
+            # Conditions to wait for (Used down below as an arg)
+            def check(reaction, user):
+                return user != self.bot.user and str(reaction.emoji) in [arrow_left, arrow_right]
+
+            current_page_index = 0
+
+            # Change pages with arrow react
             while True:
                 try:
-                    reaction, user = await self.bot.wait_for("reaction_add", timeout=60, check=check)
+                    # Raises asyncio.TimeoutError to break out of the loop
+                    reaction, user = await self.bot.wait_for("reaction_add", timeout=120, check=check)
 
-                    if str(reaction.emoji):
-                        print('Right')
+                    if str(reaction.emoji) == '➡️':
+                        current_page_index = (current_page_index + 1) % len(mentioned_freq.pages)
 
-                    elif str(reaction.emoji):
-                        print('Left')
+                    elif str(reaction.emoji) == '⬅️':
+                        current_page_index = (current_page_index - 1) % len(mentioned_freq.pages)
+
+                    # Create the new message to display
+                    embed_message = self.createEmbedMessage(mentioned_user, mentioned_freq, mentioned_freq.pages[current_page_index])
+                    embed_message.set_footer(
+                        text=f'page {current_page_index + 1}/{len(mentioned_freq.pages)}'
+                    )
+
+                    # Edit bot's discord message
+                    await bot_message.edit(embed=embed_message)
 
                 except asyncio.TimeoutError:
-                    print('Done')
                     break
                     # ending the loop if user doesn't react after x seconds
 
