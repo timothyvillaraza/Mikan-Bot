@@ -231,14 +231,21 @@ class WordFrequency(commands.Cog):
 
             # Conditions to wait for (Used down below as an arg)
             def check(reaction, user):
+                # print('Checking Reaction')
+                if reaction.message != bot_message:
+                        return False
+
                 return user != self.bot.user and str(reaction.emoji) in [arrow_left, arrow_right]
 
             current_page_index = 0
 
             # Change pages with arrow react
+            # TODO: For every active message, any reactions to any messages will 
+            #       run check() that many times causing performance issues.
             while True:
                 try:
                     # Raises asyncio.TimeoutError to break out of the loop
+                    # Flow of statements continue if check() returns true or if wait_for times out
                     reaction, user = await self.bot.wait_for("reaction_add", timeout=120, check=check)
 
                     if str(reaction.emoji) == '➡️':
@@ -257,6 +264,7 @@ class WordFrequency(commands.Cog):
                     await bot_message.edit(embed=embed_message)
 
                 except asyncio.TimeoutError:
+                    # print('Time Out')
                     break
                     # ending the loop if user doesn't react after x seconds
 
