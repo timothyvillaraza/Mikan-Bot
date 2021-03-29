@@ -9,10 +9,12 @@ Discord.py allows users to create "cogs" or encapsulated features that have thei
 By default, the command prefix is the "." (period) character.
 
 **Global Commands**
+
 - .clear_db
   - Clears the repl.it database of all it's keys.
 
 **Word Frequency Commands**
+
 Tracks the word frequency in all messages by all users, filters out profanity using the Purgomalum API, then stores it in a database for later usage.
 
 Commands (All commands begin
