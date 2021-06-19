@@ -1,4 +1,5 @@
 import discord
+import asyncio # USED TO CATCH TIMEOUT ERRROR RAISED BY discord.Client.wait_for()
 import requests
 from discord.ext import commands
 from collections import defaultdict
@@ -14,6 +15,15 @@ class WordFrequency(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.frequencyMaps = {}  # Use database eventually, username -> FrequencyMap
+    
+    # Class Definitions
+    class FrequencyMap:
+        def __init__(self, username):
+            self.username = username
+            self.sfw = False # Default: True
+            self.wordFreq = defaultdict(int) # defaultdict(int): Nonexistant keys assigned 0
+            self.sortedKeys = None
+            self.pages = []
 
 
     """
@@ -50,10 +60,14 @@ class WordFrequency(commands.Cog):
         """
 
         author_wordFreq = author.wordFreq
-        filtered_message = self.filterMessage(userInput.casefold())
+        
+        if author.sfw:
+            message = self.filterMessage(userInput.casefold())
+        else:
+            message = userInput.casefold()
 
         # If a key doesn't exist, add it with a default value of 0
-        for word in filtered_message.split():
+        for word in message.split():
             # If the current word was not censored (not all '*')
             if word != len(word) * '*':
                 author_wordFreq[word] += 1
@@ -95,20 +109,20 @@ class WordFrequency(commands.Cog):
         return word_frequency
 
 
-    def createPages(self, message, nPages=10):
+    def createPages(self, message, nWords=10):
         """
 
         Recives a word frequency string in list form and
-        returns them divides into pages by 'nPages' words.
+        returns them divides into pages by 'nWords' words.
 
         """
 
         page = ''
         pages = []
 
-        # Push every 'nPages' words into the 'pages' list
+        # Push every 'nWords' words into the 'pages' list
         for i, word in enumerate(message.split('\n')):
-            if i % nPages == 0 and i != 0:
+            if i % nWords == 0 and page != '':
                 pages.append(page)
                 page = ''
 
@@ -119,14 +133,22 @@ class WordFrequency(commands.Cog):
             pages.append(page)
 
         return pages
+    
+    def createEmbedMessage(self, user, userFreq, message):
+        # Body of Message
+        embed_message = discord.Embed(
+            title='Word Count',
+            color=discord.Color.blue(),
+            description=message
+        )
 
+        # Appears at the top of the message
+        embed_message.set_author(
+            name=user.display_name,
+            icon_url=user.avatar_url
+        )
 
-    # Class Definitions
-    class FrequencyMap:
-        def __init__(self, username):
-            self.username = username
-            self.wordFreq = defaultdict(int) # defaultdict(int): Nonexistant keys assigned 0
-            self.sortedKeys = None
+        return embed_message
 
 
     """
@@ -176,33 +198,75 @@ class WordFrequency(commands.Cog):
 
         # Look up mentioned user in database
         if mentioned_user in self.frequencyMaps:
-            # printWordFreq(users[mentioned_user])
+            # Word frequency of mentioned user
+            mentioned_freq = self.frequencyMaps[mentioned_user]
+
+            # Convert their word frequency table a string
             word_frequncy_string = self.createWordFreqString(
                 self.frequencyMaps[mentioned_user])
 
-            # Paginate string
-            pages = self.createPages(word_frequncy_string)
+            # Paginate string and save to instance
+            mentioned_freq.pages = self.createPages(word_frequncy_string)
 
             # Convert pages from string format into embed
-            for page_number, page in enumerate(pages):
-                # Body of Message
-                embed_message = discord.Embed(
-                    title='Word Count',
-                    color=discord.Color.blue(),
-                    description=page
-                )
+            page = mentioned_freq.pages[0]
 
-                # Appears at the top of the message
-                embed_message.set_author(
-                    name=mentioned_user.display_name,
-                    icon_url=mentioned_user.avatar_url
-                )
+            embed_message = self.createEmbedMessage(mentioned_user, mentioned_freq, page)
 
-                embed_message.set_footer(
-                    text=f'page {page_number + 1}/{len(pages)}'
-                )
+            # Appears at the bottom of the message
+            embed_message.set_footer(
+                text=f'page 1/{len(mentioned_freq.pages)}'
+            )
 
-                await ctx.send(embed=embed_message)
+            # Send and store sent message as a 'message' instance
+            bot_message = await ctx.send(embed=embed_message)
+
+            # Set emoji's for arrows
+            arrow_left = '⬅️'
+            arrow_right = '➡️'
+
+            # Add reactions to the send message
+            await bot_message.add_reaction(arrow_left)
+            await bot_message.add_reaction(arrow_right)
+
+            # Conditions to wait for (Used down below as an arg)
+            def check(reaction, user):
+                # print('Checking Reaction')
+                if reaction.message != bot_message:
+                        return False
+
+                return user != self.bot.user and str(reaction.emoji) in [arrow_left, arrow_right]
+
+            current_page_index = 0
+
+            # Change pages with arrow react
+            # TODO: For every active message, any reactions to any messages will 
+            #       run check() that many times causing performance issues.
+            while True:
+                try:
+                    # Raises asyncio.TimeoutError to break out of the loop
+                    # Flow of statements continue if check() returns true or if wait_for times out
+                    reaction, user = await self.bot.wait_for("reaction_add", timeout=120, check=check)
+
+                    if str(reaction.emoji) == '➡️':
+                        current_page_index = (current_page_index + 1) % len(mentioned_freq.pages)
+
+                    elif str(reaction.emoji) == '⬅️':
+                        current_page_index = (current_page_index - 1) % len(mentioned_freq.pages)
+
+                    # Create the new message to display
+                    embed_message = self.createEmbedMessage(mentioned_user, mentioned_freq, mentioned_freq.pages[current_page_index])
+                    embed_message.set_footer(
+                        text=f'page {current_page_index + 1}/{len(mentioned_freq.pages)}'
+                    )
+
+                    # Edit bot's discord message
+                    await bot_message.edit(embed=embed_message)
+
+                except asyncio.TimeoutError:
+                    # print('Time Out')
+                    break
+                    # ending the loop if user doesn't react after x seconds
 
 
     # TODO: Look up type() vs isinstance()
@@ -218,4 +282,4 @@ class WordFrequency(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             print(
                 f'freq ERROR: {ctx.author} did not specify which member to look up.'
-            )
+                )
